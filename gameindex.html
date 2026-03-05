@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hyper Charged KarKerKarKurKur</title>
+<style>
+body { font-family: Arial; background:#111; color:white; text-align:center; }
+.card { border:2px solid white; margin:10px; padding:10px; }
+button { padding:5px 10px; margin:5px; }
+</style>
+</head>
+<body>
+
+<h1>Hyper Charged KarKerKarKurKur</h1>
+<h2>Coins: <span id="coins">0</span> 🪙</h2>
+<h3>Coins / Hour: <span id="cph">0</span></h3>
+<button onclick="daily()">Daily 🎁 (50)</button>
+<button onclick="resetGame()">Reset</button>
+
+<div id="cards"></div>
+
+<script>
+
+let coins = 0;
+let lastUpdate = Date.now();
+let ultraUnlocked = false;
+let superUnlocked = false;
+
+class Card {
+  constructor(name, base, maxPower, unlockCost=0, hyperCost=500, maxHypers=1) {
+    this.name = name;
+    this.base = base;
+    this.power = unlockCost === 0 ? 1 : 0;
+    this.maxPower = maxPower;
+    this.unlockCost = unlockCost;
+    this.hyperCost = hyperCost;
+    this.maxHypers = maxHypers;
+    this.hypers = 0;
+  }
+
+  production() {
+    if (this.power === 0) return 0;
+    let multiplier = 1 + (this.power - 1) * 0.5;
+    let hyperBoost = Math.pow(2, this.hypers);
+    return this.base * multiplier * hyperBoost;
+  }
+
+  powerCost() {
+    if (this.name === "Basic") return [0,200,400][this.power];
+    if (this.name === "Kar Ker Kar Kur Kur") return [0,600,900][this.power];
+    if (this.name === "Ultra") return [1500,2500,4000,6000][this.power-1];
+    if (this.name === "Super") return 1000 * this.power;
+    return 0;
+  }
+}
+
+let cards = [
+  new Card("Basic",10,3),
+  new Card("Kar Ker Kar Kur Kur",40,3,1000)
+];
+
+function totalProduction() {
+  return cards.reduce((sum,c)=>sum+c.production(),0);
+}
+
+function updateCoins() {
+  let now = Date.now();
+  let diff = (now - lastUpdate) / 3600000;
+  coins += totalProduction() * diff;
+  lastUpdate = now;
+}
+
+function render() {
+  updateCoins();
+
+  document.getElementById("coins").innerText = Math.floor(coins);
+  document.getElementById("cph").innerText = totalProduction().toFixed(1);
+
+  let html = "";
+
+  cards.forEach((c,i)=>{
+    html += `<div class="card">
+    <h3>${c.name}</h3>
+    Power: ${c.power}/${c.maxPower === Infinity ? "∞" : c.maxPower}<br>
+    Hypers: ${c.hypers}/${c.maxHypers}<br>
+    Production: ${c.production().toFixed(1)} / hour<br>`;
+
+    if (c.power === 0)
+      html += `<button onclick="unlock(${i})">Unlock (${c.unlockCost})</button>`;
+    else {
+      if (c.power < c.maxPower)
+        html += `<button onclick="upgrade(${i})">Upgrade (${c.powerCost()})</button>`;
+      if (c.power >= 2 && c.hypers < c.maxHypers)
+        html += `<button onclick="hyper(${i})">Hyper (${c.hyperCost})</button>`;
+    }
+
+    html += `</div>`;
+  });
+
+  document.getElementById("cards").innerHTML = html;
+
+  checkUltra();
+  checkSuper();
+
+  saveGame();
+}
+
+function unlock(i){
+  let c = cards[i];
+  if (coins >= c.unlockCost){
+    coins -= c.unlockCost;
+    c.power = 1;
+  }
+}
+
+function upgrade(i){
+  let c = cards[i];
+  let cost = c.powerCost();
+  if (coins >= cost){
+    coins -= cost;
+    c.power++;
+  }
+}
+
+function hyper(i){
+  let c = cards[i];
+  if (coins >= c.hyperCost){
+    coins -= c.hyperCost;
+    c.hypers++;
+  }
+}
+
+function checkUltra(){
+  if (!ultraUnlocked &&
+      cards[0].power===3 && cards[0].hypers===1 &&
+      cards[1].power===3 && cards[1].hypers===1){
+
+    ultraUnlocked = true;
+    cards.push(new Card("Ultra",120,5,0,800,2));
+  }
+}
+
+function checkSuper(){
+  let ultra = cards.find(c=>c.name==="Ultra");
+  if (!superUnlocked && ultra && ultra.power===5 && ultra.hypers===2){
+    superUnlocked = true;
+    cards.push(new Card("Super",0,Infinity));
+  }
+}
+
+function daily(){
+  coins += 50;
+}
+
+function saveGame(){
+  localStorage.setItem("karkerSave", JSON.stringify({
+    coins,
+    lastUpdate,
+    ultraUnlocked,
+    superUnlocked,
+    cards
+  }));
+}
+
+function loadGame(){
+  let save = localStorage.getItem("karkerSave");
+  if (!save) return;
+
+  let data = JSON.parse(save);
+  coins = data.coins;
+  lastUpdate = data.lastUpdate;
+  ultraUnlocked = data.ultraUnlocked;
+  superUnlocked = data.superUnlocked;
+
+  cards = [];
+  data.cards.forEach(c=>{
+    let newCard = new Card(
+      c.name,
+      c.base,
+      c.maxPower,
+      c.unlockCost,
+      c.hyperCost,
+      c.maxHypers
+    );
+    newCard.power = c.power;
+    newCard.hypers = c.hypers;
+    cards.push(newCard);
+  });
+
+  // Offline earnings
+  let now = Date.now();
+  let diff = (now - lastUpdate) / 3600000;
+  coins += totalProduction() * diff;
+  lastUpdate = now;
+}
+
+function resetGame(){
+  localStorage.removeItem("karkerSave");
+  location.reload();
+}
+
+loadGame();
+setInterval(render,1000);
+
+</script>
+</body>
+</html>
