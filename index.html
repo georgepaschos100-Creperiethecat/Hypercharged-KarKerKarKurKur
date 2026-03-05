@@ -1,413 +1,196 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hypercharged KarKerKarKurKur</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idle Cards Game</title>
 
 <style>
 
 body{
 font-family:Arial;
-background:#0f0f0f;
+background:#121212;
 color:white;
 text-align:center;
 margin:0;
 }
 
-.container{
-max-width:600px;
-margin:auto;
+.topbar{
+background:#1e1e1e;
 padding:15px;
+font-size:18px;
 }
 
-.cards{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:10px;
+.container{
+padding:20px;
 }
 
 .card{
-background:#1e1e1e;
-padding:15px;
-border-radius:12px;
-width:160px;
-box-shadow:0 0 10px black;
+border-radius:20px;
+padding:20px;
+margin:15px;
 transition:0.2s;
 }
 
 .card:hover{
-transform:scale(1.05);
+transform:scale(1.03);
+}
+
+.basic{
+background:#444;
+}
+
+.super{
+background:#1f6fff;
+}
+
+.ultra{
+background:#ff8c2a;
 }
 
 button{
-padding:10px;
+padding:10px 20px;
 border:none;
-border-radius:8px;
-margin-top:6px;
-font-weight:bold;
-cursor:pointer;
+border-radius:10px;
+margin-top:10px;
+font-size:16px;
 transition:0.2s;
 }
 
-button:active{
-transform:scale(0.9);
+button:hover{
+transform:scale(1.05);
 }
 
-.upgrade{background:#3498db;color:white;}
-.hyper{background:purple;color:white;}
-.claim{background:#2ecc71;color:white;font-size:18px;padding:14px;}
-.daily{background:orange;color:white;}
-.mega{background:gold;color:black;}
-.rebirth{background:red;color:white;}
+.locked{
+background:gray;
+}
+
+.claim{
+background:#3cff73;
+}
+
+.upgrade{
+background:#ffd54a;
+}
 
 </style>
 </head>
 
 <body>
 
+<div class="topbar">
+Coins: <span id="coins">0</span>
+<br>
+Coins / hour: <span id="coinsHour">0</span>
+</div>
+
 <div class="container">
 
-<h1>Hypercharged KarKerKarKurKur</h1>
-
-<h2 id="coins">Coins: 0</h2>
-<h3 id="cph">Coins / Hour: 0</h3>
-
-<button class="claim" onclick="claimCoins()">Claim Coins</button>
-
-<br><br>
-
-<button class="daily" onclick="daily()">Daily Gift 🎁</button>
-<button class="mega" onclick="mega()">Mega Gift 🎉</button>
-
-<p id="giftStatus"></p>
-
-<button class="rebirth" onclick="rebirth()">Rebirth 🔥 (10000)</button>
-<p id="rebirths"></p>
-
-<div class="cards">
-
-<div class="card">
-<h3>Basic</h3>
-<p id="basicPower"></p>
-<button class="upgrade" onclick="upgrade('basic')">Upgrade</button>
-<button class="hyper" onclick="hyper('basic')">Hyper</button>
+<div class="card basic">
+<h2>Basic</h2>
+Level: <span id="basicLevel">1</span>
+<br>
+<button class="upgrade" onclick="upgradeBasic()">Upgrade (50)</button>
 </div>
 
-<div class="card">
-<h3>KarKerKarKurKur</h3>
-<p id="karPower"></p>
-<button onclick="unlockKar()">Unlock (1000)</button>
-<button class="upgrade" onclick="upgrade('kar')">Upgrade</button>
-<button class="hyper" onclick="hyper('kar')">Hyper</button>
+<div id="superCard" style="display:none" class="card super">
+<h2>Super</h2>
+Level: <span id="superLevel">1</span>
+<br>
+<button class="upgrade" onclick="upgradeSuper()">Upgrade (150)</button>
 </div>
 
-<div class="card">
-<h3>Ultra</h3>
-<p id="ultraPower"></p>
-<button onclick="unlockUltra()">Unlock</button>
-<button class="upgrade" onclick="upgrade('ultra')">Upgrade</button>
-<button class="hyper" onclick="hyper('ultra')">Hyper</button>
+<div id="ultraCard" style="display:none" class="card ultra">
+<h2>Ultra</h2>
+Level: <span id="ultraLevel">1</span>
+<br>
+<button class="upgrade" onclick="upgradeUltra()">Upgrade (400)</button>
 </div>
 
-<div class="card">
-<h3>Super ♾</h3>
-<p id="superPower"></p>
-<button onclick="upgrade('super')">Upgrade</button>
-</div>
+<h2>Mega Gifts</h2>
 
+<div id="gift1">
+Mega Gift
+<br>
+500 Coins
+<br>
+<button class="claim" onclick="claimGift()">Claim</button>
 </div>
-
 </div>
 
 <script>
 
-let save = JSON.parse(localStorage.getItem("save")) || {
+let coins=0
+let coinsHour=5
 
-coins:0,
-rebirths:0,
+let basicLevel=1
+let superLevel=1
+let ultraLevel=1
 
-basicPower:1,
-basicHyper:false,
+let superUnlocked=false
+let ultraUnlocked=false
 
-karUnlocked:false,
-karPower:0,
-karHyper:false,
-
-ultraUnlocked:false,
-ultraPower:0,
-ultraHyper1:false,
-ultraHyper2:false,
-
-superUnlocked:false,
-superPower:0,
-
-lastClaim:Date.now(),
-lastDaily:0,
-lastMega:0
-
+function updateUI(){
+document.getElementById("coins").innerText=Math.floor(coins)
+document.getElementById("coinsHour").innerText=coinsHour
 }
 
-function coinsPerHour(){
+setInterval(()=>{
+coins+=coinsHour/3600
+updateUI()
+},1000)
 
-let total=0
+function upgradeBasic(){
+let cost=50*basicLevel
+if(coins>=cost){
+coins-=cost
+basicLevel++
+coinsHour+=5
+document.getElementById("basicLevel").innerText=basicLevel
 
-let basic=save.basicPower5
-if(save.basicHyper) basic=2
-total+=basic
-
-if(save.karUnlocked){
-let kar=save.karPower10
-if(save.karHyper) kar=2
-total+=kar
+if(basicLevel>=5 && !superUnlocked){
+superUnlocked=true
+document.getElementById("superCard").style.display="block"
 }
 
-if(save.ultraUnlocked){
-let ultra=save.ultraPower20
-if(save.ultraHyper1) ultra=2
-if(save.ultraHyper2) ultra*=2
-total+=ultra
+updateUI()
+}
 }
 
-return total
+function upgradeSuper(){
+let cost=150*superLevel
+if(coins>=cost){
+coins-=cost
+superLevel++
+coinsHour+=15
+document.getElementById("superLevel").innerText=superLevel
 
+if(superLevel>=5 && !ultraUnlocked){
+ultraUnlocked=true
+document.getElementById("ultraCard").style.display="block"
 }
 
-function claimCoins(){
-
-let now=Date.now()
-let hours=(now-save.lastClaim)/3600000
-let reward=Math.floor(hourscoinsPerHour())
-
-save.coins+=reward
-save.lastClaim=now
-
-update()
-
+updateUI()
+}
 }
 
-function daily(){
-
-let now=Date.now()
-
-if(now-save.lastDaily<86400000){
-
-document.getElementById("giftStatus").innerText="Daily already claimed"
-return
-
+function upgradeUltra(){
+let cost=400*ultraLevel
+if(coins>=cost){
+coins-=cost
+ultraLevel++
+coinsHour+=40
+document.getElementById("ultraLevel").innerText=ultraLevel
+updateUI()
+}
 }
 
-save.coins+=50
-save.lastDaily=now
-
-document.getElementById("giftStatus").innerText="You got 50 coins!"
-
-update()
-
+function claimGift(){
+coins+=500
+document.getElementById("gift1").style.display="none"
+updateUI()
 }
 
-function mega(){
-
-let now=Date.now()
-
-if(now-save.lastMega<86400000){
-
-document.getElementById("giftStatus").innerText="Mega already claimed"
-return
-
-}
-
-save.coins+=500
-save.lastMega=now
-
-document.getElementById("giftStatus").innerText="Mega Gift: 500 coins!"
-
-update()
-
-}
-
-function unlockKar(){
-
-if(save.coins>=1000){
-
-save.coins-=1000
-save.karUnlocked=true
-save.karPower=1
-
-}
-
-update()
-
-}
-
-function unlockUltra(){
-
-if(save.basicPower==3 && save.basicHyper && save.karPower==3 && save.karHyper){
-
-save.ultraUnlocked=true
-save.ultraPower=1
-
-}
-
-update()
-
-}
-
-function upgrade(card){
-
-if(card=="basic"){
-
-let cost=save.basicPower200
-if(save.coins>=cost && save.basicPower<3){
-
-save.coins-=cost
-save.basicPower++
-
-}
-
-}
-
-if(card=="kar"){
-
-let cost=save.karPower300
-if(save.coins>=cost && save.karPower<3){
-
-save.coins-=cost
-save.karPower++
-
-}
-
-}
-
-if(card=="ultra"){
-
-let cost=save.ultraPower600
-if(save.coins>=cost && save.ultraPower<5){
-
-save.coins-=cost
-save.ultraPower++
-
-}
-
-}
-
-if(card=="super"){
-
-if(save.ultraPower==5 && save.ultraHyper1 && save.ultraHyper2){
-
-save.superUnlocked=true
-
-let cost=(save.superPower+1)*1000
-
-if(save.coins>=cost){
-
-save.coins-=cost
-save.superPower++
-
-}
-
-}
-
-}
-
-update()
-
-}
-
-function hyper(card){
-
-if(card=="basic" && save.basicPower>=2 && !save.basicHyper && save.coins>=500){
-
-save.coins-=500
-save.basicHyper=true
-
-}
-
-if(card=="kar" && save.karPower>=2 && !save.karHyper && save.coins>=500){
-
-save.coins-=500
-save.karHyper=true
-
-}
-
-if(card=="ultra"){
-
-if(!save.ultraHyper1 && save.coins>=800){
-
-save.coins-=800
-save.ultraHyper1=true
-
-}else if(!save.ultraHyper2 && save.coins>=800){
-
-save.coins-=800
-save.ultraHyper2=true
-
-}
-
-}
-
-update()
-
-}
-
-function rebirth(){
-
-if(save.coins<10000) return
-
-save.coins=0
-
-save.basicPower=1
-save.basicHyper=false
-
-save.karUnlocked=false
-save.karPower=0
-save.karHyper=false
-
-save.ultraUnlocked=false
-save.ultraPower=0
-save.ultraHyper1=false
-save.ultraHyper2=false
-
-save.superUnlocked=false
-save.superPower=0
-
-save.rebirths++
-
-update()
-
-}
-
-function update(){
-
-document.getElementById("coins").innerText="Coins: "+Math.floor(save.coins)
-
-document.getElementById("cph").innerText="Coins / Hour: "+coinsPerHour()
-
-document.getElementById("rebirths").innerText="🔥 Rebirths: "+save.rebirths
-
-document.getElementById("basicPower").innerText="Power "+save.basicPower+"/3"
-
-if(save.karUnlocked)
-document.getElementById("karPower").innerText="Power "+save.karPower+"/3"
-else
-document.getElementById("karPower").innerText="LOCKED"
-
-if(save.ultraUnlocked)
-document.getElementById("ultraPower").innerText="Power "+save.ultraPower+"/5"
-else
-document.getElementById("ultraPower").innerText="LOCKED"
-
-if(save.superUnlocked)
-document.getElementById("superPower").innerText="Power "+save.superPower+"/∞"
-else
-document.getElementById("superPower").innerText="LOCKED"
-
-localStorage.setItem("save",JSON.stringify(save))
-
-}
-
-update()
+updateUI()
 
 </script>
 
